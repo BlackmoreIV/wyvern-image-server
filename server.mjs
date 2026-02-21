@@ -3,7 +3,6 @@ import express from "express";
 import dotenv from "dotenv";
 import { fal } from "@fal-ai/client";
 import fs from "fs";
-import fetch from "node-fetch";
 import path from "path";
 
 dotenv.config();
