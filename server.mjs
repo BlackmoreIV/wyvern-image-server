@@ -3,46 +3,51 @@ import express from "express";
 import dotenv from "dotenv";
 import { fal } from "@fal-ai/client";
 
-dotenv.config(); // .env または Render の Environment Variables を読み込む
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const FAL_API_KEY = process.env.FAL_API_KEY;
 
-// 環境変数に APIキーがあるか確認
-if (!process.env.FAL_API_KEY) {
-  console.error("FAL_API_KEY が設定されていません。Render の Environment Variables を確認してください。");
+if (!FAL_API_KEY) {
+  console.error("FAL_API_KEY が設定されていません");
   process.exit(1);
 }
 
+// ★ 0.x 系ではこの書き方でOK
+fal.apiKey = FAL_API_KEY;
+
 app.get("/", (req, res) => {
-  res.send("画像生成サーバーが起動しています。/image?q=キーワード で生成可能です。");
+  res.send("画像生成サーバーが起動しています。/image?q=キーワード");
 });
 
 app.get("/image", async (req, res) => {
   const prompt = req.query.q;
-  if (!prompt) return res.status(400).send("q パラメータが必要です");
+  if (!prompt) {
+    return res.status(400).send("q パラメータが必要です");
+  }
 
   try {
-    // 公式サンプル準拠で fal.subscribe を使用
     const result = await fal.subscribe("fal-ai/flux-1/schnell", {
-      input: { prompt },
-      logs: true,
-      onQueueUpdate: (update) => {
-        if (update.status === "IN_PROGRESS") {
-          update.logs.map(log => log.message).forEach(console.log);
-        }
-      },
+      input: { prompt }
     });
 
-    // result.data から画像 URL を取得
-    const imageUrl = result.data.url || result.data.image_url;
-    if (!imageUrl) throw new Error("画像 URL が返ってきませんでした");
+    // 0.x 系では images 配列で返ることが多い
+    const imageUrl =
+      result?.data?.images?.[0]?.url ||
+      result?.data?.url ||
+      result?.data?.image_url;
 
-    // ブラウザで直接開ける URL にリダイレクト
-    res.redirect(imageUrl);
+    if (!imageUrl) {
+      console.error("Fal からの返却:", result);
+      throw new Error("画像URLが取得できませんでした");
+    }
+
+    return res.redirect(imageUrl);
+
   } catch (err) {
-    console.error("画像生成に失敗しました:", err);
-    res.status(500).send("画像生成に失敗しました");
+    console.error("Fal エラー:", err);
+    return res.status(500).send("画像生成に失敗しました");
   }
 });
 
