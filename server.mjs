@@ -14,6 +14,7 @@ if (!FAL_API_KEY) {
 }
 
 // Fal.ai APIキー設定
+console.log("FAL_API_KEY:", FAL_API_KEY ? "SET" : "NOT SET");
 fal.apiKey = FAL_API_KEY;
 
 // ルート確認用
@@ -55,4 +56,5 @@ app.get("/generate", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+
 });
