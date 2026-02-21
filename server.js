@@ -1,36 +1,60 @@
-import express from "express";
-import fetch from "node-fetch";
+// server.js
+const express = require('express');
+const fetch = require('node-fetch'); // Node.js 18 以降は標準fetchも可
+require('dotenv').config();
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+const FAL_API_KEY = process.env.FAL_API_KEY;
 
-app.get("/image", async (req, res) => {
-  const query = req.query.q;
-  if (!query) return res.status(400).send("Missing query parameter");
+if (!FAL_API_KEY) {
+  console.error("FAL_API_KEY が設定されていません。Render の Environment Variables を確認してください。");
+  process.exit(1);
+}
+
+async function generateImage(prompt) {
+  const response = await fetch('https://api.fal.ai/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${FAL_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "flux-1/schnell", // ← 使用するモデルを指定
+      prompt: prompt,
+      size: "512x512"          // 必要に応じて変更
+    })
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Fal.ai API エラー: ${response.status} ${text}`);
+  }
+
+  const data = await response.json();
+  return data.image_url; // APIから返される画像URLを想定
+}
+
+// ルート
+app.get('/', (req, res) => {
+  res.send("画像生成サーバーが起動しています。/image?q=キーワード で生成可能です。");
+});
+
+// 画像生成ルート
+app.get('/image', async (req, res) => {
+  const prompt = req.query.q;
+  if (!prompt) return res.status(400).send("q パラメータが必要です");
 
   try {
-    // Fal.ai APIに画像生成リクエスト
-    const response = await fetch("https://api.fal.ai/v1/images", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.FAL_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        prompt: query,
-        size: "512x512"
-      })
-    });
-
-    const data = await response.json();
-
-    // 画像URLにリダイレクト → WyvernChatで直接表示
-    res.redirect(data.url);
+    const imageUrl = await generateImage(prompt);
+    res.redirect(imageUrl);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error generating image");
+    res.status(500).send("画像生成に失敗しました");
   }
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
+// サーバー起動
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
