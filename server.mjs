@@ -14,40 +14,41 @@ if (!FAL_API_KEY) {
   process.exit(1);
 }
 
-// ★ 0.x 系ではこの書き方でOK
-fal.apiKey = FAL_API_KEY;
+// ✅ 正しい認証設定方法
+fal.config({
+  credentials: FAL_API_KEY
+});
 
 app.get("/", (req, res) => {
-  res.send("画像生成サーバーが起動しています。/image?q=キーワード");
+  res.send(
+    "画像生成サーバーが起動しています。/image?q=キーワード で生成可能です。"
+  );
 });
 
 app.get("/image", async (req, res) => {
   const prompt = req.query.q;
-  if (!prompt) {
-    return res.status(400).send("q パラメータが必要です");
-  }
+  if (!prompt) return res.status(400).send("q パラメータが必要です");
 
   try {
     const result = await fal.subscribe("fal-ai/flux-1/schnell", {
       input: { prompt }
     });
 
-    // 0.x 系では images 配列で返ることが多い
+    // 最新レスポンス構造に対応
     const imageUrl =
       result?.data?.images?.[0]?.url ||
-      result?.data?.url ||
-      result?.data?.image_url;
+      result?.data?.image?.url ||
+      result?.data?.url;
 
     if (!imageUrl) {
-      console.error("Fal からの返却:", result);
-      throw new Error("画像URLが取得できませんでした");
+      console.log(result);
+      throw new Error("画像URLが見つかりません");
     }
 
-    return res.redirect(imageUrl);
-
+    res.redirect(imageUrl);
   } catch (err) {
-    console.error("Fal エラー:", err);
-    return res.status(500).send("画像生成に失敗しました");
+    console.error("Fal Error:", err);
+    res.status(500).send("画像生成に失敗しました");
   }
 });
 
