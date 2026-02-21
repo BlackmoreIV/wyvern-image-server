@@ -20,7 +20,7 @@ async function generateImage(prompt) {
       'Authorization': `Bearer ${FAL_API_KEY}`
     },
     body: JSON.stringify({
-      model: "flux-1/schnell", // 使用するモデル
+      model: "fal-ai/flux-1/schnell", // 使用するモデル
       prompt: prompt,
       size: "512x512"          // 必要に応じて変更
     })
@@ -60,3 +60,4 @@ app.get('/image', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
