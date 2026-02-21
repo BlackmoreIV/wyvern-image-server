@@ -2,15 +2,15 @@
   "name": "wyvern-image-server",
   "version": "1.0.0",
   "description": "WyvernChat 画像生成サーバー（Fal.ai flux-1/schnell）",
-  "main": "server.cjs",
+  "main": "server.mjs",
   "scripts": {
-    "start": "node server.cjs"
+    "start": "node server.mjs"
   },
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "express": "^4.18.2",
-    "node-fetch": "^2.6.12",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "@fal-ai/client": "^1.0.0"
   },
   "engines": {
     "node": ">=18"
