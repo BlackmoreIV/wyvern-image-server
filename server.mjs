@@ -14,7 +14,7 @@ if (!FAL_API_KEY) {
   process.exit(1);
 }
 
-// ✅ 正しい認証設定方法
+// 正しい認証設定
 fal.config({
   credentials: FAL_API_KEY
 });
@@ -34,7 +34,7 @@ app.get("/image", async (req, res) => {
       input: { prompt }
     });
 
-    // 最新レスポンス構造に対応
+    // 画像URLを取得
     const imageUrl =
       result?.data?.images?.[0]?.url ||
       result?.data?.image?.url ||
@@ -45,7 +45,11 @@ app.get("/image", async (req, res) => {
       throw new Error("画像URLが見つかりません");
     }
 
-    res.redirect(imageUrl);
+    // 🔑 ここをリダイレクトから変更
+    // WyvernChatで直接埋め込み可能
+    res.setHeader("Content-Type", "text/plain");
+    res.send(imageUrl);
+
   } catch (err) {
     console.error("Fal Error:", err);
     res.status(500).send("画像生成に失敗しました");
