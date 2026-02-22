@@ -72,6 +72,44 @@ app.get("/latest.jpg", (req, res) => {
   res.sendFile(latestPath);
 });
 
+// 追加ルート：クエリ無し .jpg 方式
+app.get("/generate/:prompt.jpg", async (req, res) => {
+  const prompt = req.params.prompt;
+  if (!prompt) return res.status(400).send("prompt が必要です");
+
+  try {
+    const result = await fal.subscribe("fal-ai/flux-1/schnell", {
+      input: { prompt }
+    });
+
+    const imageUrl =
+      result?.data?.images?.[0]?.url ||
+      result?.data?.image?.url ||
+      result?.data?.url;
+
+    if (!imageUrl) {
+      console.log(result);
+      throw new Error("画像URLが見つかりません");
+    }
+
+    // 画像ダウンロード
+    const response = await fetch(imageUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // latest.jpg 上書き保存
+    fs.writeFileSync(latestPath, buffer);
+
+    // そのまま画像として返す
+    res.setHeader("Content-Type", "image/jpeg");
+    res.send(buffer);
+
+  } catch (err) {
+    console.error("Fal Error:", err);
+    res.status(500).send("画像生成に失敗しました");
+  }
+});
+
 // サーバー起動
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
