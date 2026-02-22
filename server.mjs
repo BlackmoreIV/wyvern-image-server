@@ -5,7 +5,6 @@ import { fal } from "@fal-ai/client";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch"; // Node 18+ では不要な場合もあります
 
 dotenv.config();
 
@@ -61,7 +60,7 @@ app.get("/image", async (req, res) => {
   }
 });
 
-// ⭐ 追加: /generate で latest.jpg を生成
+// ⭐ /generate で latest.jpg を生成
 app.get("/generate", async (req, res) => {
   const prompt = req.query.q;
   if (!prompt) return res.status(400).send("q パラメータが必要です");
@@ -81,7 +80,7 @@ app.get("/generate", async (req, res) => {
       throw new Error("画像URLが見つかりません");
     }
 
-    // 画像をダウンロードして latest.jpg に保存
+    // ⭐ 標準 fetch を使用
     const response = await fetch(imageUrl);
     const buffer = Buffer.from(await response.arrayBuffer());
     const filePath = path.join(__dirname, "latest.jpg");
@@ -94,7 +93,7 @@ app.get("/generate", async (req, res) => {
   }
 });
 
-// ⭐ 追加: latest.jpg 配信用
+// ⭐ latest.jpg 配信用
 app.use(express.static(__dirname));
 
 // サーバー起動
