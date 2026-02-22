@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import { fal } from "@fal-ai/client";
 import fs from "fs";
 import path from "path";
-import fetch from "node-fetch"; // Node.js 18 以降は標準 fetch でも可
 
 dotenv.config();
 
@@ -53,10 +52,10 @@ app.get("/image", async (req, res) => {
       throw new Error("画像URLが見つかりません");
     }
 
-    // 画像をダウンロードして latest.jpg に保存
+    // 画像をダウンロードして latest.jpg に保存（標準 fetch を使用）
     const response = await fetch(imageUrl);
-    const buffer = Buffer.from(await response.arrayBuffer());
-    fs.writeFileSync(latestPath, buffer);
+    const arrayBuffer = await response.arrayBuffer();
+    fs.writeFileSync(latestPath, Buffer.from(arrayBuffer));
 
     res.send(`生成完了！ /latest.jpg で確認可能です。`);
   } catch (err) {
