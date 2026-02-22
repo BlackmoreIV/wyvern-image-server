@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import { fal } from "@fal-ai/client";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
+import fetch from "node-fetch"; // Node.js 18 以降は標準 fetch でも可
 
 dotenv.config();
 
@@ -17,23 +17,22 @@ if (!FAL_API_KEY) {
   process.exit(1);
 }
 
-// ✅ 正しい認証設定方法
+// Fal.ai 認証設定
 fal.config({
   credentials: FAL_API_KEY
 });
 
-// __dirname 用意 (ESM)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// latest.jpg の保存先
+const latestPath = path.join(process.cwd(), "latest.jpg");
 
-// 既存ルート
+// ルート
 app.get("/", (req, res) => {
   res.send(
-    "画像生成サーバーが起動しています。/image?q=キーワード で生成可能です。"
+    "画像生成サーバーが起動しています。/image?q=キーワード で生成可能です。/latest.jpg で最新画像を参照可能。"
   );
 });
 
-// 既存 /image ルート
+// 画像生成ルート
 app.get("/image", async (req, res) => {
   const prompt = req.query.q;
   if (!prompt) return res.status(400).send("q パラメータが必要です");
@@ -43,6 +42,7 @@ app.get("/image", async (req, res) => {
       input: { prompt }
     });
 
+    // 生成結果の画像URL
     const imageUrl =
       result?.data?.images?.[0]?.url ||
       result?.data?.image?.url ||
@@ -53,48 +53,25 @@ app.get("/image", async (req, res) => {
       throw new Error("画像URLが見つかりません");
     }
 
-    res.redirect(imageUrl);
-  } catch (err) {
-    console.error("Fal Error:", err);
-    res.status(500).send("画像生成に失敗しました");
-  }
-});
-
-// ⭐ /generate で latest.jpg を生成
-app.get("/generate", async (req, res) => {
-  const prompt = req.query.q;
-  if (!prompt) return res.status(400).send("q パラメータが必要です");
-
-  try {
-    const result = await fal.subscribe("fal-ai/flux-1/schnell", {
-      input: { prompt }
-    });
-
-    const imageUrl =
-      result?.data?.images?.[0]?.url ||
-      result?.data?.image?.url ||
-      result?.data?.url;
-
-    if (!imageUrl) {
-      console.log(result);
-      throw new Error("画像URLが見つかりません");
-    }
-
-    // ⭐ 標準 fetch を使用
+    // 画像をダウンロードして latest.jpg に保存
     const response = await fetch(imageUrl);
     const buffer = Buffer.from(await response.arrayBuffer());
-    const filePath = path.join(__dirname, "latest.jpg");
-    fs.writeFileSync(filePath, buffer);
+    fs.writeFileSync(latestPath, buffer);
 
-    res.send("latest.jpg を更新しました");
+    res.send(`生成完了！ /latest.jpg で確認可能です。`);
   } catch (err) {
     console.error("Fal Error:", err);
     res.status(500).send("画像生成に失敗しました");
   }
 });
 
-// ⭐ latest.jpg 配信用
-app.use(express.static(__dirname));
+// latest.jpg を静的ファイルとして提供
+app.get("/latest.jpg", (req, res) => {
+  if (!fs.existsSync(latestPath)) {
+    return res.status(404).send("latest.jpg が存在しません");
+  }
+  res.sendFile(latestPath);
+});
 
 // サーバー起動
 app.listen(PORT, () => {
